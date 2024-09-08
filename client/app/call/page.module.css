@@ -4,6 +4,9 @@
   justify-content: center;
 
   min-height: 100vh;
+
+  --tile-condensed-width: 33vw;
+  --tile-expanded-width: 50vw;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -26,9 +29,6 @@
 .tile {
   display: flex;
   flex-direction: column;
-  gap: 15px;
-
-  max-width: 33vw;
   background-color: #fff;
   border-radius: 32px;
   padding: 24px;
@@ -36,11 +36,34 @@
   filter: drop-shadow(0 0 0.75rem rgb(177, 222, 255));
 }
 
-.tile li {
+.content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.tile h2 {
+  margin-bottom: 15px;
+}
+
+.description {
+  gap: 15px;
+}
+
+.description li {
   margin: 0 0 20px 20px;
 }
 
-.button  {
+.hidden {
+  display: none;
+  flex: 0;
+}
+
+.talkingWave {
+  flex: 1;
+}
+
+.callbutton  {
+  flex: 1;
   appearance: none;
   border-radius: 128px;
   height: 48px;
@@ -55,29 +78,54 @@
   font-size: 16px;
   line-height: 20px;
   font-weight: 500;
+
+  background: rgb(52, 202, 90);
+  color: #fff;
 }
 
-a.primary {
-  background: var(--foreground);
-  color: var(--background);
+.endbutton  {
+  appearance: none;
+  border-radius: 128px;
+  height: 48px;
+  padding: 0 20px;
+  border: none;
+  border: 1px solid transparent;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: 500;
+
+  background: rgb(202, 52, 52);
+  color: #fff;
+}
+
+.footer {
+  display: flex;
 }
 
 /* Enable hover only on non-touch devices */
 @media (hover: hover) and (pointer: fine) {
-  a.primary:hover {
+  .callbutton:hover {
     background: var(--button-primary-hover);
-    border-color: var(--foreground);
+    border-color: rgb(52, 202, 90);
     color: var(--foreground);
   }
-
+  .endbutton:hover {
+    background: var(--button-primary-hover);
+    border-color: rgb(202, 52, 52);
+    color: var(--foreground);
+  }
 }
 
 @media (max-width: 600px) {
   .page {
     padding: 32px;
-  }
 
-  .tile {
-    max-width: 90vw;
+    --tile-condensed-width: 90vw;
+    --tile-expanded-width: 90vh;
   }
 }

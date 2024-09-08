@@ -8,13 +8,27 @@ from retell import AsyncRetell
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 
-app = FastAPI()
+from fastapi.middleware.cors import CORSMiddleware  # TODO: remove.
+
 load_dotenv(dotenv_path='.env.local')
-client = AsyncRetell(
-    api_key=os.environ['RETELL_API_KEY'],
+
+ORIGINS = [
+    "http://localhost:3000",  # local client.
+]
+
+app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# Define a Pydantic model that represents the expected structure of your request body.
+
+client = AsyncRetell(api_key=os.environ['RETELL_API_KEY'])
+
+# Request body.
 class Register_Params(BaseModel):
     agent_id: str
     description: str = None
@@ -77,3 +91,13 @@ async def register_call(params: Register_Params):
     )
 
     return JSONResponse(content={ 'call_id': call.call_id }, status_code=200)
+
+@app.post("/debug/start-call")
+async def start_call():
+    print("Starting call...")
+    call = await client.call.create_web_call(
+        agent_id="agent_45b928a513a87da3a0927ba694"
+    )
+
+    return JSONResponse(content={'access_token': call.access_token},
+                        status_code=200)
