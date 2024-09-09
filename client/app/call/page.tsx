@@ -1,12 +1,18 @@
 'use client'
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { redirect, useSearchParams } from "next/navigation";
 
 import { motion } from 'framer-motion';
 import { RetellWebClient } from "retell-client-js-sdk";
 
 import styles from "./page.module.css";
+import {Message} from '@/components/chat';
+import ChatComponent from '@/components/chat';
+
+enum Speaker {
+  AGENT = 'agent', USER = 'user', UNKNOWN = 'unknown'
+};
 
 interface ScenarioDetails {
   description: string,
@@ -51,9 +57,9 @@ const tileVariants = {
 };
 
 const descriptionVariants = {
-  visible: { opacity: 1, y: 0 },
-  initial: { opacity: 0, y: -75 },
-  hidden: { opacity: 0, y: -25 }
+  visible: { opacity: 1, y: 0, display: 'auto' },
+  initial: { opacity: 0, y: -75, display: 'none' },
+  hidden: { opacity: 0, y: -25, display: 'none' }
 };
 
 const retellWebClient = new RetellWebClient();
@@ -63,7 +69,23 @@ export default function Page() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [callInProgress, setCallState] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [speaker, setSpeaker] = useState<Speaker>(Speaker.UNKNOWN);
 
+  function insertMessage(msg: Message) {
+    setMessages(messages.concat(msg));
+  }
+
+  function updateRecentMessage(msg: Message, idx: number) {
+    setMessages(messages.map((m, index) => {
+      if (index === idx) {
+        return { ...m };
+      }
+      return { ...m, text: msg.text };
+    }));
+    console.log('update', messages);
+  }
+  
   // Read in scenario details.
   const searchParams = useSearchParams()
   const scenario = searchParams.get('scenario');
@@ -83,7 +105,6 @@ export default function Page() {
       fetch("http://127.0.0.1:8000/debug/start-call", {method: "POST"})
       .then((response) => response.json())
       .then((data) => {
-        console.log(data);
         retellWebClient.startCall({
           accessToken: data.access_token,
         });
@@ -108,7 +129,32 @@ export default function Page() {
   });
 
   retellWebClient.on("update", (update) => {
-    console.log(update);
+    const msgCount = update.transcript.length;
+    for (let i = 0; i < msgCount; i++) {
+      // Only check the last two transcripts for the most recent user and agent
+      // chat.
+      if (i < msgCount - 2) { continue; }
+      const msg = update.transcript[i];
+      console.log('processing ', msg);
+
+      // If there is a new speaker create a new message.
+      if (i === msgCount - 1 && msg.role != speaker) {
+        console.log('new speaker:', msg.role);
+        setSpeaker(msg.role);
+        // Content will be added by update below.
+        insertMessage({sender: msg.role});
+      }
+      
+      updateRecentMessage({sender: msg.role, text: msg.content}, i);
+    }
+  });
+
+  retellWebClient.on("agent_start_talking", () => {
+    console.log("agent_start_talking");
+  });
+
+  retellWebClient.on("agent_stop_talking", () => {
+    console.log("agent_stop_talking");
   });
 
   retellWebClient.on("error", (error) => {
@@ -139,6 +185,9 @@ export default function Page() {
           </ol>
         </motion.div>
       </motion.div>
+      
+      {/* Chat box appears when description disapears */}
+      <ChatComponent messages={messages}/>
 
       <motion.div className={styles.footer}>
         <motion.div className={callInProgress ? styles.talkingWave : styles.hidden}>
