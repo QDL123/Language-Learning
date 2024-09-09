@@ -3,10 +3,29 @@ import os
 import asyncio
 from responder import Responder
 from dotenv import load_dotenv
+from retell import AsyncRetell
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse
+
+from fastapi.middleware.cors import CORSMiddleware  # TODO: remove.
+
+load_dotenv(dotenv_path='.env.local')
+
+ORIGINS = [
+    "http://localhost:3000",  # local client.
+]
 
 app = FastAPI()
-load_dotenv(dotenv_path='.env.local')
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+client = AsyncRetell(api_key=os.environ['RETELL_API_KEY'])
 
 # Old way of handling websocket connections
 @app.websocket("/llm-websocket/{call_id}")
@@ -52,3 +71,14 @@ async def websocket_handler(websocket: WebSocket, call_id: str):
         print(f'LLM WebSocket error for {call_id}: {e}')
     finally:
         print(f"LLM WebSocket connection closed for {call_id}")
+
+
+@app.post("/debug/start-call")
+async def start_call():
+    print("Starting call...")
+    call = await client.call.create_web_call(
+        agent_id="agent_45b928a513a87da3a0927ba694"
+    )
+
+    return JSONResponse(content={'access_token': call.access_token},
+                        status_code=200)
